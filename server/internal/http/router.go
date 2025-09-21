@@ -32,7 +32,7 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, hub *ws.Hub, cfg *config.Confi
 	paymentHandler := handlers.NewPaymentHandler(db, cfg)
 
 	// API routes
-	api := router.Group("/api")
+	api := router.Group("/api/v1")
 	{
 		// Auth routes
 		auth := api.Group("/auth")

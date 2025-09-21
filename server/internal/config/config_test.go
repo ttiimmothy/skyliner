@@ -19,7 +19,7 @@ func TestLoad(t *testing.T) {
 	cfg, err := Load()
 	assert.NoError(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, "postgres://postgres:postgres@localhost:5432/flightdb?sslmode=disable", cfg.DatabaseURL)
+	assert.Equal(t, "postgres://myuser:mysecretpassword@localhost:5432/skyliner?sslmode=disable", cfg.DatabaseURL)
 	assert.Equal(t, "redis://localhost:6379", cfg.RedisURL)
 	assert.Equal(t, "change_me", cfg.JWTSecret)
 	assert.Equal(t, 15*time.Minute, cfg.JWTAccessTTL)

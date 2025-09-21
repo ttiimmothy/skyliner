@@ -213,6 +213,7 @@ docker compose logs -f
 # Backend
 cd server
 docker build -t skyliner-backend .
+```
 
 ## Environment Variables
 

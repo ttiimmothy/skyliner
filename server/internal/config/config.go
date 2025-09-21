@@ -20,7 +20,7 @@ type Config struct {
 
 func Load() (*Config, error) {
 	config := &Config{
-		DatabaseURL:         getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/flightdb?sslmode=disable"),
+		DatabaseURL:         getEnv("DATABASE_URL", "postgres://myuser:mysecretpassword@localhost:5432/skyliner?sslmode=disable"),
 		RedisURL:            getEnv("REDIS_URL", "redis://localhost:6379"),
 		JWTSecret:           getEnv("JWT_SECRET", "change_me"),
 		JWTAccessTTL:        parseDuration(getEnv("JWT_ACCESS_TTL", "15m")),

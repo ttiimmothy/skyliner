@@ -16,6 +16,15 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, hub *ws.Hub, cfg *config.Confi
 	router.Use(middleware.Logger())
 	router.Use(middleware.Recovery())
 
+	// Health check endpoint
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "healthy",
+			"service": "skyliner-api",
+			"version": "1.0.0",
+		})
+	})
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	searchHandler := handlers.NewSearchHandler(db)
@@ -23,7 +32,7 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, hub *ws.Hub, cfg *config.Confi
 	paymentHandler := handlers.NewPaymentHandler(db, cfg)
 
 	// API routes
-	api := router.Group("/api/v1")
+	api := router.Group("/api")
 	{
 		// Auth routes
 		auth := api.Group("/auth")

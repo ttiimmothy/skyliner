@@ -1,8 +1,8 @@
 import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
-import { defineConfig } from 'eslint/config';
+import globals from "globals"
 
-export default defineConfig(
+export default [
   // Base ESLint recommended rules
   eslint.configs.recommended,
 
@@ -31,5 +31,21 @@ export default defineConfig(
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
     }
+  },
+  {
+    files: [
+      '**/*.config.{js,cjs,mjs,ts}',
+      'vite.config.{js,ts,mjs,cjs}'
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: 'module',
+      globals: {
+        ...globals.node,   // defines process, module, __dirname, etc.
+      },
+    },
+    // If some of these are CJS, ESLint handles them fine; if needed,
+    // add parserOptions.sourceType per-file.
+    rules: {},
   }
-)
+]

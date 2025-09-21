@@ -79,7 +79,7 @@ npm run dev -- --port 5193
 
 #### 4. Access the application
 - Frontend: http://localhost:5193
-- Backend API: http://localhost:8080/api/v1
+- Backend API: http://localhost:8080/api
 - Database: localhost:5432
 - Redis: localhost:6379
 

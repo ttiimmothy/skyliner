@@ -65,6 +65,7 @@ cp env.example .env
 # Edit .env with your database URL and JWT secret
 make migrate
 make seed
+make install-air
 make dev
 ```
 
@@ -74,7 +75,7 @@ cd frontend
 npm install
 cp env.example .env
 # Edit .env with your API URL
-npm run dev -- --port 5193
+npm run start
 ```
 
 #### 4. Access the application
@@ -212,10 +213,6 @@ docker compose logs -f
 # Backend
 cd server
 docker build -t skyliner-backend .
-
-# Frontend
-cd frontend
-docker build -t skyliner-frontend .
 ```
 
 ## Environment Variables

@@ -9,6 +9,12 @@ import (
 )
 
 func TestLoad(t *testing.T) {
+	// Clear environment variables to test defaults
+	os.Unsetenv("DATABASE_URL")
+	os.Unsetenv("JWT_SECRET")
+	os.Unsetenv("JWT_ACCESS_TTL")
+	os.Unsetenv("JWT_REFRESH_TTL")
+
 	// Test with default values
 	cfg, err := Load()
 	assert.NoError(t, err)

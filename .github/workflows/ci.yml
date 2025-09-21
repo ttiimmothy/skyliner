@@ -43,6 +43,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.25'
+        cache: false 
 
     - name: Cache Go modules
       uses: actions/cache@v3
@@ -156,6 +157,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.25'
+        cache: false 
 
     - name: Set up Node.js
       uses: actions/setup-node@v4

@@ -1,0 +1,2004 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">skyliner/cmd/server/main.go (0.0%)</option>
+				
+				<option value="file1">skyliner/internal/config/config.go (84.6%)</option>
+				
+				<option value="file2">skyliner/internal/db/db.go (42.9%)</option>
+				
+				<option value="file3">skyliner/internal/db/migrate.go (0.0%)</option>
+				
+				<option value="file4">skyliner/internal/db/seed.go (0.0%)</option>
+				
+				<option value="file5">skyliner/internal/http/handlers/auth.go (74.5%)</option>
+				
+				<option value="file6">skyliner/internal/http/handlers/booking.go (0.0%)</option>
+				
+				<option value="file7">skyliner/internal/http/handlers/payment.go (0.0%)</option>
+				
+				<option value="file8">skyliner/internal/http/handlers/search.go (85.2%)</option>
+				
+				<option value="file9">skyliner/internal/http/middleware/middleware.go (76.6%)</option>
+				
+				<option value="file10">skyliner/internal/http/router.go (0.0%)</option>
+				
+				<option value="file11">skyliner/internal/ws/events.go (0.0%)</option>
+				
+				<option value="file12">skyliner/internal/ws/hub.go (31.1%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "log"
+
+        "skyliner/internal/config"
+        "skyliner/internal/db"
+        "skyliner/internal/http"
+        "skyliner/internal/ws"
+
+        "github.com/gin-gonic/gin"
+)
+
+func main() <span class="cov0" title="0">{
+        // Load configuration
+        cfg, err := config.Load()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Failed to load config:", err)
+        }</span>
+
+        // Initialize database
+        <span class="cov0" title="0">database, err := db.New(cfg.DatabaseURL)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Failed to connect to database:", err)
+        }</span>
+
+        // Run migrations
+        <span class="cov0" title="0">if err := db.Migrate(database); err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Failed to run migrations:", err)
+        }</span>
+
+        // Initialize WebSocket hub
+        <span class="cov0" title="0">hub := ws.NewHub()
+        go hub.Run()
+
+        // Initialize HTTP server
+        router := gin.Default()
+
+        // Setup routes
+        http.SetupRoutes(router, database, hub, cfg)
+
+        log.Printf("Server starting on port %s", "8080")
+        if err := router.Run(":" + "8080"); err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Failed to start server:", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "os"
+        "time"
+)
+
+type Config struct {
+        DatabaseURL         string
+        RedisURL            string
+        JWTSecret           string
+        JWTAccessTTL        time.Duration
+        JWTRefreshTTL       time.Duration
+        GoogleClientID      string
+        StripeSecretKey     string
+        StripeWebhookSecret string
+        CORSOrigins         []string
+        Port                string
+}
+
+func Load() (*Config, error) <span class="cov3" title="2">{
+        config := &amp;Config{
+                DatabaseURL:         getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/flightdb?sslmode=disable"),
+                RedisURL:            getEnv("REDIS_URL", "redis://localhost:6379"),
+                JWTSecret:           getEnv("JWT_SECRET", "change_me"),
+                JWTAccessTTL:        parseDuration(getEnv("JWT_ACCESS_TTL", "15m")),
+                JWTRefreshTTL:       parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
+                GoogleClientID:      getEnv("GOOGLE_CLIENT_ID", ""),
+                StripeSecretKey:     getEnv("STRIPE_SECRET_KEY", ""),
+                StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", ""),
+        }
+
+        return config, nil
+}</span>
+
+func getEnv(key, defaultValue string) string <span class="cov10" title="18">{
+        if value := os.Getenv(key); value != "" </span><span class="cov6" title="5">{
+                return value
+        }</span>
+        <span class="cov8" title="13">return defaultValue</span>
+}
+
+func parseDuration(s string) time.Duration <span class="cov7" title="8">{
+        d, err := time.ParseDuration(s)
+        if err != nil </span><span class="cov1" title="1">{
+                // Default fallback
+                if s == "15m" </span><span class="cov0" title="0">{
+                        return 15 * time.Minute
+                }</span>
+                <span class="cov1" title="1">if s == "168h" </span><span class="cov0" title="0">{
+                        return 168 * time.Hour
+                }</span>
+                <span class="cov1" title="1">return 15 * time.Minute</span>
+        }
+        <span class="cov7" title="7">return d</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package db
+
+import (
+        "fmt"
+        "log"
+
+        "skyliner/internal/db/models"
+
+        "gorm.io/driver/postgres"
+        "gorm.io/gorm"
+        "gorm.io/gorm/logger"
+)
+
+func New(databaseURL string) (*gorm.DB, error) <span class="cov8" title="1">{
+        db, err := gorm.Open(postgres.Open(databaseURL), &amp;gorm.Config{
+                Logger: logger.Default.LogMode(logger.Info),
+        })
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to connect to database: %w", err)
+        }</span>
+
+        // Auto-migrate all models
+        <span class="cov0" title="0">if err := db.AutoMigrate(
+                &amp;models.User{},
+                &amp;models.Airport{},
+                &amp;models.Airline{},
+                &amp;models.Flight{},
+                &amp;models.Fare{},
+                &amp;models.SeatMap{},
+                &amp;models.Seat{},
+                &amp;models.Booking{},
+                &amp;models.Itinerary{},
+                &amp;models.Segment{},
+                &amp;models.Passenger{},
+                &amp;models.Payment{},
+                &amp;models.Baggage{},
+        ); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to migrate database: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">log.Println("Database connected and migrated successfully")
+        return db, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package db
+
+import (
+        "log"
+
+        "gorm.io/gorm"
+)
+
+func Migrate(db *gorm.DB) error <span class="cov0" title="0">{
+        // GORM AutoMigrate is already called in db.New()
+        // This function is kept for future manual migrations if needed
+        log.Println("Database migrations completed")
+        return nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package db
+
+import (
+        "log"
+        "time"
+
+        "skyliner/internal/db/models"
+
+        "golang.org/x/crypto/bcrypt"
+        "gorm.io/gorm"
+)
+
+func Seed(db *gorm.DB) error <span class="cov0" title="0">{
+        log.Println("Seeding database...")
+
+        // Create users
+        if err := seedUsers(db); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Create airports
+        <span class="cov0" title="0">if err := seedAirports(db); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Create airlines
+        <span class="cov0" title="0">if err := seedAirlines(db); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Create flights
+        <span class="cov0" title="0">if err := seedFlights(db); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Create seat maps
+        <span class="cov0" title="0">if err := seedSeatMaps(db); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">log.Println("Database seeded successfully")
+        return nil</span>
+}
+
+func seedUsers(db *gorm.DB) error <span class="cov0" title="0">{
+        // Check if users already exist
+        var count int64
+        db.Model(&amp;models.User{}).Count(&amp;count)
+        if count &gt; 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        // Hash password
+        <span class="cov0" title="0">hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">users := []models.User{
+                {
+                        Email:        "traveler@example.com",
+                        PasswordHash: string(hashedPassword),
+                        FirstName:    "John",
+                        LastName:     "Traveler",
+                        Role:         models.RoleTraveler,
+                        IsActive:     true,
+                },
+                {
+                        Email:        "agent@example.com",
+                        PasswordHash: string(hashedPassword),
+                        FirstName:    "Jane",
+                        LastName:     "Agent",
+                        Role:         models.RoleAgent,
+                        IsActive:     true,
+                },
+                {
+                        Email:        "admin@example.com",
+                        PasswordHash: string(hashedPassword),
+                        FirstName:    "Admin",
+                        LastName:     "User",
+                        Role:         models.RoleAdmin,
+                        IsActive:     true,
+                },
+        }
+
+        return db.Create(&amp;users).Error</span>
+}
+
+func seedAirports(db *gorm.DB) error <span class="cov0" title="0">{
+        var count int64
+        db.Model(&amp;models.Airport{}).Count(&amp;count)
+        if count &gt; 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">airports := []models.Airport{
+                {Code: "JFK", Name: "John F. Kennedy International Airport", City: "New York", Country: "USA", Latitude: 40.6413, Longitude: -73.7781},
+                {Code: "LAX", Name: "Los Angeles International Airport", City: "Los Angeles", Country: "USA", Latitude: 33.9416, Longitude: -118.4085},
+                {Code: "LHR", Name: "London Heathrow Airport", City: "London", Country: "UK", Latitude: 51.4700, Longitude: -0.4543},
+                {Code: "CDG", Name: "Charles de Gaulle Airport", City: "Paris", Country: "France", Latitude: 49.0097, Longitude: 2.5479},
+                {Code: "NRT", Name: "Narita International Airport", City: "Tokyo", Country: "Japan", Latitude: 35.7720, Longitude: 140.3928},
+                {Code: "SFO", Name: "San Francisco International Airport", City: "San Francisco", Country: "USA", Latitude: 37.6213, Longitude: -122.3790},
+        }
+
+        return db.Create(&amp;airports).Error</span>
+}
+
+func seedAirlines(db *gorm.DB) error <span class="cov0" title="0">{
+        var count int64
+        db.Model(&amp;models.Airline{}).Count(&amp;count)
+        if count &gt; 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">airlines := []models.Airline{
+                {Code: "AA", Name: "American Airlines"},
+                {Code: "DL", Name: "Delta Air Lines"},
+                {Code: "UA", Name: "United Airlines"},
+                {Code: "BA", Name: "British Airways"},
+                {Code: "AF", Name: "Air France"},
+                {Code: "JL", Name: "Japan Airlines"},
+        }
+
+        return db.Create(&amp;airlines).Error</span>
+}
+
+func seedFlights(db *gorm.DB) error <span class="cov0" title="0">{
+        var count int64
+        db.Model(&amp;models.Flight{}).Count(&amp;count)
+        if count &gt; 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        // Get airports and airlines for foreign keys
+        <span class="cov0" title="0">var airports []models.Airport
+        var airlines []models.Airline
+        db.Find(&amp;airports)
+        db.Find(&amp;airlines)
+
+        if len(airports) &lt; 2 || len(airlines) &lt; 1 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">now := time.Now()
+        flights := []models.Flight{
+                {
+                        Number:        "AA100",
+                        AirlineID:     airlines[0].ID,
+                        OriginID:      airports[0].ID, // JFK
+                        DestinationID: airports[1].ID, // LAX
+                        DepartureTime: now.Add(24 * time.Hour),
+                        ArrivalTime:   now.Add(24*time.Hour + 5*time.Hour + 30*time.Minute),
+                        Duration:      330, // 5h 30m
+                        Stops:         0,
+                },
+                {
+                        Number:        "BA200",
+                        AirlineID:     airlines[3].ID,
+                        OriginID:      airports[0].ID, // JFK
+                        DestinationID: airports[2].ID, // LHR
+                        DepartureTime: now.Add(48 * time.Hour),
+                        ArrivalTime:   now.Add(48*time.Hour + 7*time.Hour),
+                        Duration:      420, // 7h
+                        Stops:         0,
+                },
+                {
+                        Number:        "AF300",
+                        AirlineID:     airlines[4].ID,
+                        OriginID:      airports[2].ID, // LHR
+                        DestinationID: airports[3].ID, // CDG
+                        DepartureTime: now.Add(72 * time.Hour),
+                        ArrivalTime:   now.Add(72*time.Hour + 1*time.Hour + 15*time.Minute),
+                        Duration:      75, // 1h 15m
+                        Stops:         0,
+                },
+        }
+
+        if err := db.Create(&amp;flights).Error; err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Create fares for each flight
+        <span class="cov0" title="0">for _, flight := range flights </span><span class="cov0" title="0">{
+                fares := []models.Fare{
+                        {
+                                FlightID:  flight.ID,
+                                Class:     "economy",
+                                FareType:  "basic",
+                                BasePrice: 299.99,
+                                Currency:  "USD",
+                                Available: 50,
+                        },
+                        {
+                                FlightID:  flight.ID,
+                                Class:     "economy",
+                                FareType:  "standard",
+                                BasePrice: 399.99,
+                                Currency:  "USD",
+                                Available: 30,
+                        },
+                        {
+                                FlightID:  flight.ID,
+                                Class:     "business",
+                                FareType:  "flexible",
+                                BasePrice: 899.99,
+                                Currency:  "USD",
+                                Available: 12,
+                        },
+                }
+                db.Create(&amp;fares)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func seedSeatMaps(db *gorm.DB) error <span class="cov0" title="0">{
+        var count int64
+        db.Model(&amp;models.SeatMap{}).Count(&amp;count)
+        if count &gt; 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">var flights []models.Flight
+        db.Find(&amp;flights)
+
+        for _, flight := range flights </span><span class="cov0" title="0">{
+                // Create seat maps for each class
+                classes := []string{"economy", "business", "first"}
+                for _, class := range classes </span><span class="cov0" title="0">{
+                        seatMap := models.SeatMap{
+                                FlightID: flight.ID,
+                                Class:    class,
+                        }
+                        db.Create(&amp;seatMap)
+
+                        // Create seats for this map
+                        rows := 20
+                        if class == "business" </span><span class="cov0" title="0">{
+                                rows = 8
+                        }</span> else<span class="cov0" title="0"> if class == "first" </span><span class="cov0" title="0">{
+                                rows = 4
+                        }</span>
+
+                        <span class="cov0" title="0">columns := []string{"A", "B", "C", "D", "E", "F"}
+                        if class == "business" </span><span class="cov0" title="0">{
+                                columns = []string{"A", "B", "C", "D"}
+                        }</span> else<span class="cov0" title="0"> if class == "first" </span><span class="cov0" title="0">{
+                                columns = []string{"A", "B"}
+                        }</span>
+
+                        <span class="cov0" title="0">for row := 1; row &lt;= rows; row++ </span><span class="cov0" title="0">{
+                                for _, col := range columns </span><span class="cov0" title="0">{
+                                        seat := models.Seat{
+                                                SeatMapID: seatMap.ID,
+                                                Row:       row,
+                                                Column:    col,
+                                                Class:     class,
+                                                Status:    models.SeatAvailable,
+                                        }
+                                        if class == "business" </span><span class="cov0" title="0">{
+                                                price := 50.0
+                                                seat.Price = &amp;price
+                                        }</span> else<span class="cov0" title="0"> if class == "first" </span><span class="cov0" title="0">{
+                                                price := 100.0
+                                                seat.Price = &amp;price
+                                        }</span>
+                                        <span class="cov0" title="0">db.Create(&amp;seat)</span>
+                                }
+                        }
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package handlers
+
+import (
+        "net/http"
+        "time"
+
+        "skyliner/internal/config"
+        "skyliner/internal/db/models"
+
+        "github.com/gin-gonic/gin"
+        "github.com/golang-jwt/jwt/v5"
+        "golang.org/x/crypto/bcrypt"
+        "gorm.io/gorm"
+)
+
+type AuthHandler struct {
+        db  *gorm.DB
+        cfg *config.Config
+}
+
+func NewAuthHandler(db *gorm.DB, cfg *config.Config) *AuthHandler <span class="cov10" title="5">{
+        return &amp;AuthHandler{db: db, cfg: cfg}
+}</span>
+
+type SignupRequest struct {
+        Email     string `json:"email" binding:"required,email"`
+        Password  string `json:"password" binding:"required,min=8"`
+        FirstName string `json:"first_name" binding:"required"`
+        LastName  string `json:"last_name" binding:"required"`
+}
+
+type LoginRequest struct {
+        Email    string `json:"email" binding:"required,email"`
+        Password string `json:"password" binding:"required"`
+}
+
+type AuthResponse struct {
+        User         models.User `json:"user"`
+        AccessToken  string      `json:"access_token"`
+        RefreshToken string      `json:"refresh_token"`
+}
+
+func (h *AuthHandler) Signup(c *gin.Context) <span class="cov10" title="5">{
+        var req SignupRequest
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov7" title="3">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        // Check if user already exists
+        <span class="cov4" title="2">var existingUser models.User
+        if err := h.db.Where("email = ?", req.Email).First(&amp;existingUser).Error; err == nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
+                return
+        }</span>
+
+        // Hash password
+        <span class="cov4" title="2">hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+                return
+        }</span>
+
+        // Create user
+        <span class="cov4" title="2">user := models.User{
+                Email:        req.Email,
+                PasswordHash: string(hashedPassword),
+                FirstName:    req.FirstName,
+                LastName:     req.LastName,
+                Role:         models.RoleTraveler,
+                IsActive:     true,
+        }
+
+        if err := h.db.Create(&amp;user).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+                return
+        }</span>
+
+        // Generate tokens
+        <span class="cov4" title="2">accessToken, refreshToken, err := h.generateTokens(user.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+                return
+        }</span>
+
+        <span class="cov4" title="2">c.JSON(http.StatusCreated, AuthResponse{
+                User:         user,
+                AccessToken:  accessToken,
+                RefreshToken: refreshToken,
+        })</span>
+}
+
+func (h *AuthHandler) Login(c *gin.Context) <span class="cov8" title="4">{
+        var req LoginRequest
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov1" title="1">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        // Find user
+        <span class="cov7" title="3">var user models.User
+        if err := h.db.Where("email = ?", req.Email).First(&amp;user).Error; err != nil </span><span class="cov1" title="1">{
+                c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+                return
+        }</span>
+
+        // Check password
+        <span class="cov4" title="2">if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil </span><span class="cov1" title="1">{
+                c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+                return
+        }</span>
+
+        // Check if user is active
+        <span class="cov1" title="1">if !user.IsActive </span><span class="cov0" title="0">{
+                c.JSON(http.StatusUnauthorized, gin.H{"error": "Account is deactivated"})
+                return
+        }</span>
+
+        // Generate tokens
+        <span class="cov1" title="1">accessToken, refreshToken, err := h.generateTokens(user.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+                return
+        }</span>
+
+        <span class="cov1" title="1">c.JSON(http.StatusOK, AuthResponse{
+                User:         user,
+                AccessToken:  accessToken,
+                RefreshToken: refreshToken,
+        })</span>
+}
+
+func (h *AuthHandler) GoogleAuth(c *gin.Context) <span class="cov1" title="1">{
+        // TODO: Implement Google OAuth
+        c.JSON(http.StatusNotImplemented, gin.H{"error": "Google OAuth not implemented yet"})
+}</span>
+
+func (h *AuthHandler) Refresh(c *gin.Context) <span class="cov1" title="1">{
+        // TODO: Implement refresh token logic
+        c.JSON(http.StatusNotImplemented, gin.H{"error": "Refresh token not implemented yet"})
+}</span>
+
+func (h *AuthHandler) Logout(c *gin.Context) <span class="cov1" title="1">{
+        // TODO: Implement logout (invalidate refresh token)
+        c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}</span>
+
+func (h *AuthHandler) generateTokens(userID uint) (string, string, error) <span class="cov7" title="3">{
+        // Access token
+        accessClaims := jwt.MapClaims{
+                "user_id": userID,
+                "exp":     time.Now().Add(h.cfg.JWTAccessTTL).Unix(),
+                "type":    "access",
+        }
+        accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
+        accessTokenString, err := accessToken.SignedString([]byte(h.cfg.JWTSecret))
+        if err != nil </span><span class="cov0" title="0">{
+                return "", "", err
+        }</span>
+
+        // Refresh token
+        <span class="cov7" title="3">refreshClaims := jwt.MapClaims{
+                "user_id": userID,
+                "exp":     time.Now().Add(h.cfg.JWTRefreshTTL).Unix(),
+                "type":    "refresh",
+        }
+        refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+        refreshTokenString, err := refreshToken.SignedString([]byte(h.cfg.JWTSecret))
+        if err != nil </span><span class="cov0" title="0">{
+                return "", "", err
+        }</span>
+
+        <span class="cov7" title="3">return accessTokenString, refreshTokenString, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package handlers
+
+import (
+        "net/http"
+        "strconv"
+        "time"
+
+        "skyliner/internal/config"
+        "skyliner/internal/db/models"
+
+        "github.com/gin-gonic/gin"
+        "gorm.io/gorm"
+)
+
+type BookingHandler struct {
+        db  *gorm.DB
+        cfg *config.Config
+}
+
+func NewBookingHandler(db *gorm.DB, cfg *config.Config) *BookingHandler <span class="cov0" title="0">{
+        return &amp;BookingHandler{db: db, cfg: cfg}
+}</span>
+
+type CreateBookingRequest struct {
+        Segments   []SegmentRequest   `json:"segments" binding:"required"`
+        Passengers []PassengerRequest `json:"passengers" binding:"required"`
+        Seats      []SeatRequest      `json:"seats"`
+        Extras     []ExtraRequest     `json:"extras"`
+}
+
+type SegmentRequest struct {
+        FlightID   uint    `json:"flight_id" binding:"required"`
+        FareID     uint    `json:"fare_id" binding:"required"`
+        SeatNumber *string `json:"seat_number"`
+}
+
+type PassengerRequest struct {
+        FirstName   string     `json:"first_name" binding:"required"`
+        LastName    string     `json:"last_name" binding:"required"`
+        Email       string     `json:"email"`
+        Phone       string     `json:"phone"`
+        DateOfBirth *time.Time `json:"date_of_birth"`
+        Passport    *string    `json:"passport"`
+        SSR         *string    `json:"ssr"`
+}
+
+type SeatRequest struct {
+        SegmentID uint `json:"segment_id" binding:"required"`
+        SeatID    uint `json:"seat_id" binding:"required"`
+}
+
+type ExtraRequest struct {
+        Type  string  `json:"type" binding:"required"` // baggage, meal, etc.
+        Price float64 `json:"price" binding:"required"`
+}
+
+type BookingResponse struct {
+        Booking     models.Booking `json:"booking"`
+        TotalAmount float64        `json:"total_amount"`
+}
+
+func (h *BookingHandler) CreateBooking(c *gin.Context) <span class="cov0" title="0">{
+        userID := c.GetUint("user_id")
+        var req CreateBookingRequest
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        // Start transaction
+        <span class="cov0" title="0">tx := h.db.Begin()
+        defer func() </span><span class="cov0" title="0">{
+                if r := recover(); r != nil </span><span class="cov0" title="0">{
+                        tx.Rollback()
+                }</span>
+        }()
+
+        // Generate PNR
+        <span class="cov0" title="0">pnr := h.generatePNR()
+
+        // Calculate total amount
+        totalAmount := 0.0
+        for _, segment := range req.Segments </span><span class="cov0" title="0">{
+                var fare models.Fare
+                if err := tx.First(&amp;fare, segment.FareID).Error; err != nil </span><span class="cov0" title="0">{
+                        tx.Rollback()
+                        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid fare ID"})
+                        return
+                }</span>
+                <span class="cov0" title="0">totalAmount += fare.BasePrice</span>
+        }
+
+        // Add extras
+        <span class="cov0" title="0">for _, extra := range req.Extras </span><span class="cov0" title="0">{
+                totalAmount += extra.Price
+        }</span>
+
+        // Create booking
+        <span class="cov0" title="0">booking := models.Booking{
+                PNR:         pnr,
+                UserID:      userID,
+                Status:      models.StatusHold,
+                TotalAmount: totalAmount,
+                Currency:    "USD",
+        }
+
+        if err := tx.Create(&amp;booking).Error; err != nil </span><span class="cov0" title="0">{
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create booking"})
+                return
+        }</span>
+
+        // Create itinerary
+        <span class="cov0" title="0">itinerary := models.Itinerary{
+                BookingID: booking.ID,
+        }
+        if err := tx.Create(&amp;itinerary).Error; err != nil </span><span class="cov0" title="0">{
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create itinerary"})
+                return
+        }</span>
+
+        // Create segments
+        <span class="cov0" title="0">for _, segmentReq := range req.Segments </span><span class="cov0" title="0">{
+                segment := models.Segment{
+                        ItineraryID: itinerary.ID,
+                        FlightID:    segmentReq.FlightID,
+                        FareID:      segmentReq.FareID,
+                        SeatNumber:  segmentReq.SeatNumber,
+                }
+                if err := tx.Create(&amp;segment).Error; err != nil </span><span class="cov0" title="0">{
+                        tx.Rollback()
+                        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create segment"})
+                        return
+                }</span>
+        }
+
+        // Create passengers
+        <span class="cov0" title="0">for _, passengerReq := range req.Passengers </span><span class="cov0" title="0">{
+                passenger := models.Passenger{
+                        BookingID:   booking.ID,
+                        FirstName:   passengerReq.FirstName,
+                        LastName:    passengerReq.LastName,
+                        Email:       passengerReq.Email,
+                        Phone:       passengerReq.Phone,
+                        DateOfBirth: passengerReq.DateOfBirth,
+                        Passport:    passengerReq.Passport,
+                        SSR:         passengerReq.SSR,
+                }
+                if err := tx.Create(&amp;passenger).Error; err != nil </span><span class="cov0" title="0">{
+                        tx.Rollback()
+                        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create passenger"})
+                        return
+                }</span>
+        }
+
+        // Create baggage for extras
+        <span class="cov0" title="0">for _, extra := range req.Extras </span><span class="cov0" title="0">{
+                if extra.Type == "baggage" </span><span class="cov0" title="0">{
+                        baggage := models.Baggage{
+                                BookingID: booking.ID,
+                                Type:      "checked",
+                                Price:     extra.Price,
+                        }
+                        if err := tx.Create(&amp;baggage).Error; err != nil </span><span class="cov0" title="0">{
+                                tx.Rollback()
+                                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create baggage"})
+                                return
+                        }</span>
+                }
+        }
+
+        // Update seat availability
+        <span class="cov0" title="0">for _, seatReq := range req.Seats </span><span class="cov0" title="0">{
+                if err := tx.Model(&amp;models.Seat{}).Where("id = ?", seatReq.SeatID).Update("status", models.SeatSelected).Error; err != nil </span><span class="cov0" title="0">{
+                        tx.Rollback()
+                        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seat status"})
+                        return
+                }</span>
+        }
+
+        // Commit transaction
+        <span class="cov0" title="0">if err := tx.Commit().Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit booking"})
+                return
+        }</span>
+
+        // Load booking with relations
+        <span class="cov0" title="0">if err := h.db.Preload("User").Preload("Itinerary.Segments.Flight").Preload("Itinerary.Segments.Fare").Preload("Passengers").First(&amp;booking, booking.ID).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load booking"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusCreated, BookingResponse{
+                Booking:     booking,
+                TotalAmount: totalAmount,
+        })</span>
+}
+
+func (h *BookingHandler) GetBooking(c *gin.Context) <span class="cov0" title="0">{
+        bookingIDStr := c.Param("id")
+        bookingID, err := strconv.ParseUint(bookingIDStr, 10, 32)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">userID := c.GetUint("user_id")
+
+        var booking models.Booking
+        if err := h.db.Preload("User").Preload("Itinerary.Segments.Flight.Airline").Preload("Itinerary.Segments.Flight.Origin").Preload("Itinerary.Segments.Flight.Destination").Preload("Itinerary.Segments.Fare").Preload("Passengers").Preload("Payments").Where("id = ? AND user_id = ?", uint(bookingID), userID).First(&amp;booking).Error; err != nil </span><span class="cov0" title="0">{
+                if err == gorm.ErrRecordNotFound </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+                        return
+                }</span>
+                <span class="cov0" title="0">c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch booking"})
+                return</span>
+        }
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, gin.H{"booking": booking})</span>
+}
+
+func (h *BookingHandler) IssueBooking(c *gin.Context) <span class="cov0" title="0">{
+        bookingIDStr := c.Param("id")
+        bookingID, err := strconv.ParseUint(bookingIDStr, 10, 32)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">userID := c.GetUint("user_id")
+
+        var booking models.Booking
+        if err := h.db.Where("id = ? AND user_id = ?", uint(bookingID), userID).First(&amp;booking).Error; err != nil </span><span class="cov0" title="0">{
+                if err == gorm.ErrRecordNotFound </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+                        return
+                }</span>
+                <span class="cov0" title="0">c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch booking"})
+                return</span>
+        }
+
+        <span class="cov0" title="0">if booking.Status != models.StatusPaid </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Booking must be paid before issuing"})
+                return
+        }</span>
+
+        // Update booking status to ticketed
+        <span class="cov0" title="0">if err := h.db.Model(&amp;booking).Update("status", models.StatusTicketed).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to issue booking"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, gin.H{"message": "Booking issued successfully"})</span>
+}
+
+func (h *BookingHandler) CancelBooking(c *gin.Context) <span class="cov0" title="0">{
+        bookingIDStr := c.Param("id")
+        bookingID, err := strconv.ParseUint(bookingIDStr, 10, 32)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">userID := c.GetUint("user_id")
+
+        var booking models.Booking
+        if err := h.db.Where("id = ? AND user_id = ?", uint(bookingID), userID).First(&amp;booking).Error; err != nil </span><span class="cov0" title="0">{
+                if err == gorm.ErrRecordNotFound </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+                        return
+                }</span>
+                <span class="cov0" title="0">c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch booking"})
+                return</span>
+        }
+
+        <span class="cov0" title="0">if booking.Status == models.StatusCancelled </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Booking already cancelled"})
+                return
+        }</span>
+
+        // Update booking status to cancelled
+        <span class="cov0" title="0">if err := h.db.Model(&amp;booking).Update("status", models.StatusCancelled).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel booking"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, gin.H{"message": "Booking cancelled successfully"})</span>
+}
+
+func (h *BookingHandler) GetAllBookings(c *gin.Context) <span class="cov0" title="0">{
+        // Admin/Agent only
+        var bookings []models.Booking
+        if err := h.db.Preload("User").Preload("Itinerary.Segments.Flight").Preload("Passengers").Find(&amp;bookings).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch bookings"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, gin.H{"bookings": bookings})</span>
+}
+
+func (h *BookingHandler) WaiveBooking(c *gin.Context) <span class="cov0" title="0">{
+        // TODO: Implement waiver logic
+        c.JSON(http.StatusNotImplemented, gin.H{"error": "Waiver not implemented yet"})
+}</span>
+
+func (h *BookingHandler) RepriceBookings(c *gin.Context) <span class="cov0" title="0">{
+        // TODO: Implement reprice logic
+        c.JSON(http.StatusNotImplemented, gin.H{"error": "Reprice not implemented yet"})
+}</span>
+
+func (h *BookingHandler) generatePNR() string <span class="cov0" title="0">{
+        // Simple PNR generation - in production, use a more sophisticated method
+        return "SKY" + strconv.FormatInt(time.Now().Unix(), 36)
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package handlers
+
+import (
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "strconv"
+
+        "skyliner/internal/config"
+        "skyliner/internal/db/models"
+
+        "github.com/gin-gonic/gin"
+        "github.com/stripe/stripe-go/v76"
+        billingportal "github.com/stripe/stripe-go/v76/billingportal/session"
+        "github.com/stripe/stripe-go/v76/checkout/session"
+        "github.com/stripe/stripe-go/v76/customer"
+        "github.com/stripe/stripe-go/v76/webhook"
+        "gorm.io/gorm"
+)
+
+type PaymentHandler struct {
+        db  *gorm.DB
+        cfg *config.Config
+}
+
+func NewPaymentHandler(db *gorm.DB, cfg *config.Config) *PaymentHandler <span class="cov0" title="0">{
+        // Set Stripe secret key
+        stripe.Key = cfg.StripeSecretKey
+        return &amp;PaymentHandler{db: db, cfg: cfg}
+}</span>
+
+type CheckoutSessionRequest struct {
+        BookingID uint `json:"booking_id" binding:"required"`
+}
+
+type CheckoutSessionResponse struct {
+        SessionID string `json:"session_id"`
+        URL       string `json:"url"`
+}
+
+type BillingPortalRequest struct {
+        BookingID uint `json:"booking_id" binding:"required"`
+}
+
+type BillingPortalResponse struct {
+        URL string `json:"url"`
+}
+
+func (h *PaymentHandler) CreateCheckoutSession(c *gin.Context) <span class="cov0" title="0">{
+        userID := c.GetUint("user_id")
+        var req CheckoutSessionRequest
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        // Get booking
+        <span class="cov0" title="0">var booking models.Booking
+        if err := h.db.Preload("User").Where("id = ? AND user_id = ?", req.BookingID, userID).First(&amp;booking).Error; err != nil </span><span class="cov0" title="0">{
+                if err == gorm.ErrRecordNotFound </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+                        return
+                }</span>
+                <span class="cov0" title="0">c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch booking"})
+                return</span>
+        }
+
+        <span class="cov0" title="0">if booking.Status != models.StatusHold </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Booking is not in hold status"})
+                return
+        }</span>
+
+        // Create or get Stripe customer
+        <span class="cov0" title="0">customerID, err := h.getOrCreateStripeCustomer(&amp;booking.User)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer"})
+                return
+        }</span>
+
+        // Create checkout session
+        <span class="cov0" title="0">params := &amp;stripe.CheckoutSessionParams{
+                Customer:           stripe.String(customerID),
+                PaymentMethodTypes: stripe.StringSlice([]string{"card"}),
+                LineItems: []*stripe.CheckoutSessionLineItemParams{
+                        {
+                                PriceData: &amp;stripe.CheckoutSessionLineItemPriceDataParams{
+                                        Currency: stripe.String(booking.Currency),
+                                        ProductData: &amp;stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+                                                Name: stripe.String(fmt.Sprintf("Flight Booking - %s", booking.PNR)),
+                                        },
+                                        UnitAmount: stripe.Int64(int64(booking.TotalAmount * 100)), // Convert to cents
+                                },
+                                Quantity: stripe.Int64(1),
+                        },
+                },
+                Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+                SuccessURL: stripe.String("http://localhost:5193/booking/" + strconv.Itoa(int(booking.ID)) + "?success=true"),
+                CancelURL:  stripe.String("http://localhost:5193/booking/" + strconv.Itoa(int(booking.ID)) + "?cancelled=true"),
+                Metadata: map[string]string{
+                        "booking_id": strconv.Itoa(int(booking.ID)),
+                },
+        }
+
+        session, err := session.New(params)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
+                return
+        }</span>
+
+        // Update booking with session ID
+        <span class="cov0" title="0">if err := h.db.Model(&amp;booking).Update("stripe_session_id", session.ID).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update booking"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, CheckoutSessionResponse{
+                SessionID: session.ID,
+                URL:       session.URL,
+        })</span>
+}
+
+func (h *PaymentHandler) CreateBillingPortal(c *gin.Context) <span class="cov0" title="0">{
+        userID := c.GetUint("user_id")
+        var req BillingPortalRequest
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        // Get booking
+        <span class="cov0" title="0">var booking models.Booking
+        if err := h.db.Preload("User").Where("id = ? AND user_id = ?", req.BookingID, userID).First(&amp;booking).Error; err != nil </span><span class="cov0" title="0">{
+                if err == gorm.ErrRecordNotFound </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+                        return
+                }</span>
+                <span class="cov0" title="0">c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch booking"})
+                return</span>
+        }
+
+        // Get or create Stripe customer
+        <span class="cov0" title="0">customerID, err := h.getOrCreateStripeCustomer(&amp;booking.User)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer"})
+                return
+        }</span>
+
+        // Create billing portal session
+        <span class="cov0" title="0">params := &amp;stripe.BillingPortalSessionParams{
+                Customer:  stripe.String(customerID),
+                ReturnURL: stripe.String("http://localhost:5193/billing"),
+        }
+
+        session, err := billingportal.New(params)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create billing portal session"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, BillingPortalResponse{
+                URL: session.URL,
+        })</span>
+}
+
+func (h *PaymentHandler) HandleStripeWebhook(c *gin.Context) <span class="cov0" title="0">{
+        payload, err := c.GetRawData()
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+                return
+        }</span>
+
+        // Verify webhook signature
+        <span class="cov0" title="0">event, err := webhook.ConstructEvent(payload, c.GetHeader("Stripe-Signature"), h.cfg.StripeWebhookSecret)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature"})
+                return
+        }</span>
+
+        // Handle the event
+        <span class="cov0" title="0">switch event.Type </span>{
+        case "checkout.session.completed":<span class="cov0" title="0">
+                var session stripe.CheckoutSession
+                if err := json.Unmarshal(event.Data.Raw, &amp;session); err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session data"})
+                        return
+                }</span>
+                <span class="cov0" title="0">h.handleCheckoutSessionCompleted(&amp;session)</span>
+        case "payment_intent.succeeded":<span class="cov0" title="0">
+                var paymentIntent stripe.PaymentIntent
+                if err := json.Unmarshal(event.Data.Raw, &amp;paymentIntent); err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payment intent data"})
+                        return
+                }</span>
+                <span class="cov0" title="0">h.handlePaymentIntentSucceeded(&amp;paymentIntent)</span>
+        default:<span class="cov0" title="0">
+                fmt.Printf("Unhandled event type: %s\n", event.Type)</span>
+        }
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, gin.H{"status": "success"})</span>
+}
+
+func (h *PaymentHandler) getOrCreateStripeCustomer(user *models.User) (string, error) <span class="cov0" title="0">{
+        // Check if user already has a Stripe customer ID stored
+        // For now, create a new customer each time
+        params := &amp;stripe.CustomerParams{
+                Email: stripe.String(user.Email),
+                Name:  stripe.String(user.FirstName + " " + user.LastName),
+        }
+
+        customer, err := customer.New(params)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov0" title="0">return customer.ID, nil</span>
+}
+
+func (h *PaymentHandler) handleCheckoutSessionCompleted(session *stripe.CheckoutSession) <span class="cov0" title="0">{
+        // Get booking ID from metadata
+        bookingIDStr, exists := session.Metadata["booking_id"]
+        if !exists </span><span class="cov0" title="0">{
+                fmt.Printf("No booking_id in session metadata\n")
+                return
+        }</span>
+
+        <span class="cov0" title="0">bookingID, err := strconv.ParseUint(bookingIDStr, 10, 32)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Printf("Invalid booking_id in session metadata: %s\n", bookingIDStr)
+                return
+        }</span>
+
+        // Update booking status to paid
+        <span class="cov0" title="0">if err := h.db.Model(&amp;models.Booking{}).Where("id = ?", uint(bookingID)).Update("status", models.StatusPaid).Error; err != nil </span><span class="cov0" title="0">{
+                fmt.Printf("Failed to update booking status: %v\n", err)
+                return
+        }</span>
+
+        // Create payment record
+        <span class="cov0" title="0">payment := models.Payment{
+                BookingID:       uint(bookingID),
+                StripePaymentID: session.PaymentIntent.ID,
+                Amount:          float64(session.AmountTotal) / 100, // Convert from cents
+                Currency:        string(session.Currency),
+                Status:          "succeeded",
+        }
+
+        if err := h.db.Create(&amp;payment).Error; err != nil </span><span class="cov0" title="0">{
+                fmt.Printf("Failed to create payment record: %v\n", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("Booking %d marked as paid\n", bookingID)</span>
+}
+
+func (h *PaymentHandler) handlePaymentIntentSucceeded(paymentIntent *stripe.PaymentIntent) <span class="cov0" title="0">{
+        // This is handled by checkout.session.completed for now
+        fmt.Printf("Payment intent succeeded: %s\n", paymentIntent.ID)
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package handlers
+
+import (
+        "net/http"
+        "strconv"
+        "time"
+
+        "skyliner/internal/db/models"
+
+        "github.com/gin-gonic/gin"
+        "gorm.io/gorm"
+)
+
+type SearchHandler struct {
+        db *gorm.DB
+}
+
+func NewSearchHandler(db *gorm.DB) *SearchHandler <span class="cov6" title="4">{
+        return &amp;SearchHandler{db: db}
+}</span>
+
+type SearchRequest struct {
+        TripType    string `json:"trip_type" binding:"required"` // one-way, round-trip, multi-city
+        Legs        []Leg  `json:"legs" binding:"required"`
+        Passengers  int    `json:"passengers" binding:"required,min=1,max=9"`
+        Cabin       string `json:"cabin"`       // economy, business, first
+        Flexibility int    `json:"flexibility"` // days
+}
+
+type Leg struct {
+        Origin      string `json:"origin" binding:"required"`
+        Destination string `json:"destination" binding:"required"`
+        Date        string `json:"date" binding:"required"`
+}
+
+type SearchResponse struct {
+        Flights []FlightResult `json:"flights"`
+        Total   int            `json:"total"`
+}
+
+type FlightResult struct {
+        ID            uint           `json:"id"`
+        Number        string         `json:"number"`
+        Airline       models.Airline `json:"airline"`
+        Origin        models.Airport `json:"origin"`
+        Destination   models.Airport `json:"destination"`
+        DepartureTime time.Time      `json:"departure_time"`
+        ArrivalTime   time.Time      `json:"arrival_time"`
+        Duration      int            `json:"duration"`
+        Stops         int            `json:"stops"`
+        Fares         []FareResult   `json:"fares"`
+}
+
+type FareResult struct {
+        ID        uint    `json:"id"`
+        Class     string  `json:"class"`
+        FareType  string  `json:"fare_type"`
+        BasePrice float64 `json:"base_price"`
+        Currency  string  `json:"currency"`
+        Available int     `json:"available"`
+}
+
+func (h *SearchHandler) GetAirports(c *gin.Context) <span class="cov1" title="1">{
+        var airports []models.Airport
+        if err := h.db.Find(&amp;airports).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch airports"})
+                return
+        }</span>
+
+        <span class="cov1" title="1">c.JSON(http.StatusOK, gin.H{"airports": airports})</span>
+}
+
+func (h *SearchHandler) GetAirlines(c *gin.Context) <span class="cov1" title="1">{
+        var airlines []models.Airline
+        if err := h.db.Find(&amp;airlines).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch airlines"})
+                return
+        }</span>
+
+        <span class="cov1" title="1">c.JSON(http.StatusOK, gin.H{"airlines": airlines})</span>
+}
+
+func (h *SearchHandler) SearchFlights(c *gin.Context) <span class="cov8" title="6">{
+        var req SearchRequest
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov1" title="1">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        // For now, search the first leg only
+        <span class="cov7" title="5">if len(req.Legs) == 0 </span><span class="cov1" title="1">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "At least one leg required"})
+                return
+        }</span>
+
+        <span class="cov6" title="4">leg := req.Legs[0]
+        departureDate, err := time.Parse("2006-01-02", leg.Date)
+        if err != nil </span><span class="cov1" title="1">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+                return
+        }</span>
+
+        // Build query
+        <span class="cov5" title="3">query := h.db.Model(&amp;models.Flight{}).
+                Preload("Airline").
+                Preload("Origin").
+                Preload("Destination").
+                Preload("Fares").
+                Where("origin_id IN (SELECT id FROM airports WHERE code = ?)", leg.Origin).
+                Where("destination_id IN (SELECT id FROM airports WHERE code = ?)", leg.Destination)
+
+        // Add date range for flexibility
+        if req.Flexibility &gt; 0 </span><span class="cov1" title="1">{
+                startDate := departureDate.AddDate(0, 0, -req.Flexibility)
+                endDate := departureDate.AddDate(0, 0, req.Flexibility)
+                query = query.Where("departure_time BETWEEN ? AND ?", startDate, endDate)
+        }</span> else<span class="cov3" title="2"> {
+                startDate := departureDate.Truncate(24 * time.Hour)
+                endDate := startDate.Add(24 * time.Hour)
+                query = query.Where("departure_time BETWEEN ? AND ?", startDate, endDate)
+        }</span>
+
+        // Filter by cabin class if specified
+        <span class="cov5" title="3">if req.Cabin != "" </span><span class="cov1" title="1">{
+                query = query.Joins("JOIN fares ON fares.flight_id = flights.id").
+                        Where("fares.class = ?", req.Cabin)
+        }</span>
+
+        <span class="cov5" title="3">var flights []models.Flight
+        if err := query.Find(&amp;flights).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search flights"})
+                return
+        }</span>
+
+        // Convert to response format
+        <span class="cov5" title="3">var results []FlightResult
+        for _, flight := range flights </span><span class="cov8" title="6">{
+                var fares []FareResult
+                for _, fare := range flight.Fares </span><span class="cov10" title="9">{
+                        fares = append(fares, FareResult{
+                                ID:        fare.ID,
+                                Class:     fare.Class,
+                                FareType:  fare.FareType,
+                                BasePrice: fare.BasePrice,
+                                Currency:  fare.Currency,
+                                Available: fare.Available,
+                        })
+                }</span>
+
+                <span class="cov8" title="6">results = append(results, FlightResult{
+                        ID:            flight.ID,
+                        Number:        flight.Number,
+                        Airline:       flight.Airline,
+                        Origin:        flight.Origin,
+                        Destination:   flight.Destination,
+                        DepartureTime: flight.DepartureTime,
+                        ArrivalTime:   flight.ArrivalTime,
+                        Duration:      flight.Duration,
+                        Stops:         flight.Stops,
+                        Fares:         fares,
+                })</span>
+        }
+
+        <span class="cov5" title="3">c.JSON(http.StatusOK, SearchResponse{
+                Flights: results,
+                Total:   len(results),
+        })</span>
+}
+
+func (h *SearchHandler) GetSeatMap(c *gin.Context) <span class="cov3" title="2">{
+        flightIDStr := c.Param("id")
+        flightID, err := strconv.ParseUint(flightIDStr, 10, 32)
+        if err != nil </span><span class="cov1" title="1">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid flight ID"})
+                return
+        }</span>
+
+        <span class="cov1" title="1">var seatMaps []models.SeatMap
+        if err := h.db.Preload("Seats").Where("flight_id = ?", uint(flightID)).Find(&amp;seatMaps).Error; err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch seat map"})
+                return
+        }</span>
+
+        <span class="cov1" title="1">c.JSON(http.StatusOK, gin.H{"seat_maps": seatMaps})</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package middleware
+
+import (
+        "fmt"
+        "net/http"
+        "strings"
+        "time"
+
+        "skyliner/internal/db/models"
+
+        "github.com/gin-gonic/gin"
+        "github.com/golang-jwt/jwt/v5"
+        "gorm.io/gorm"
+)
+
+func CORS(origins []string) gin.HandlerFunc <span class="cov1" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="3">{
+                origin := c.Request.Header.Get("Origin")
+                allowed := false
+                for _, o := range origins </span><span class="cov10" title="4">{
+                        if o == origin </span><span class="cov5" title="2">{
+                                allowed = true
+                                break</span>
+                        }
+                }
+
+                <span class="cov8" title="3">if allowed </span><span class="cov5" title="2">{
+                        c.Header("Access-Control-Allow-Origin", origin)
+                }</span>
+                <span class="cov8" title="3">c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization")
+                c.Header("Access-Control-Allow-Credentials", "true")
+
+                if c.Request.Method == "OPTIONS" </span><span class="cov1" title="1">{
+                        c.AbortWithStatus(http.StatusNoContent)
+                        return
+                }</span>
+
+                <span class="cov5" title="2">c.Next()</span>
+        }
+}
+
+func Logger() gin.HandlerFunc <span class="cov0" title="0">{
+        return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string </span><span class="cov0" title="0">{
+                return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
+                        param.ClientIP,
+                        param.TimeStamp.Format(time.RFC1123),
+                        param.Method,
+                        param.Path,
+                        param.Request.Proto,
+                        param.StatusCode,
+                        param.Latency,
+                        param.Request.UserAgent(),
+                        param.ErrorMessage,
+                )
+        }</span>)
+}
+
+func Recovery() gin.HandlerFunc <span class="cov0" title="0">{
+        return gin.Recovery()
+}</span>
+
+func AuthRequired(jwtSecret string) gin.HandlerFunc <span class="cov1" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="3">{
+                authHeader := c.GetHeader("Authorization")
+                if authHeader == "" </span><span class="cov1" title="1">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov5" title="2">tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+                if tokenString == authHeader </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Bearer token required"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov5" title="2">token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) </span><span class="cov1" title="1">{
+                        return []byte(jwtSecret), nil
+                }</span>)
+
+                <span class="cov5" title="2">if err != nil || !token.Valid </span><span class="cov1" title="1">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov1" title="1">claims, ok := token.Claims.(jwt.MapClaims)
+                if !ok </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov1" title="1">userID, ok := claims["user_id"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov1" title="1">c.Set("user_id", uint(userID))
+                c.Next()</span>
+        }
+}
+
+func AdminRequired() gin.HandlerFunc <span class="cov8" title="3">{
+        return func(c *gin.Context) </span><span class="cov8" title="3">{
+                userID, exists := c.Get("user_id")
+                if !exists </span><span class="cov1" title="1">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+                        c.Abort()
+                        return
+                }</span>
+
+                // Get user from database to check role
+                <span class="cov5" title="2">var user models.User
+                if err := c.MustGet("db").(*gorm.DB).First(&amp;user, userID).Error; err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov5" title="2">if user.Role != models.RoleAdmin &amp;&amp; user.Role != models.RoleAgent </span><span class="cov1" title="1">{
+                        c.JSON(http.StatusForbidden, gin.H{"error": "Admin or Agent access required"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov1" title="1">c.Next()</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package http
+
+import (
+        "skyliner/internal/config"
+        "skyliner/internal/http/handlers"
+        "skyliner/internal/http/middleware"
+        "skyliner/internal/ws"
+
+        "github.com/gin-gonic/gin"
+        "gorm.io/gorm"
+)
+
+func SetupRoutes(router *gin.Engine, db *gorm.DB, hub *ws.Hub, cfg *config.Config) <span class="cov0" title="0">{
+        // Middleware
+        router.Use(middleware.CORS(cfg.CORSOrigins))
+        router.Use(middleware.Logger())
+        router.Use(middleware.Recovery())
+
+        // Initialize handlers
+        authHandler := handlers.NewAuthHandler(db, cfg)
+        searchHandler := handlers.NewSearchHandler(db)
+        bookingHandler := handlers.NewBookingHandler(db, cfg)
+        paymentHandler := handlers.NewPaymentHandler(db, cfg)
+
+        // API routes
+        api := router.Group("/api/v1")
+        </span><span class="cov0" title="0">{
+                // Auth routes
+                auth := api.Group("/auth")
+                </span><span class="cov0" title="0">{
+                        auth.POST("/signup", authHandler.Signup)
+                        auth.POST("/login", authHandler.Login)
+                        auth.POST("/google", authHandler.GoogleAuth)
+                        auth.POST("/refresh", authHandler.Refresh)
+                        auth.POST("/logout", authHandler.Logout)
+                }</span>
+
+                // Public routes
+                <span class="cov0" title="0">api.GET("/airports", searchHandler.GetAirports)
+                api.GET("/airlines", searchHandler.GetAirlines)
+                api.POST("/search", searchHandler.SearchFlights)
+                api.GET("/flights/:id/seatmap", searchHandler.GetSeatMap)
+
+                // Protected routes
+                protected := api.Group("")
+                protected.Use(middleware.AuthRequired(cfg.JWTSecret))
+                </span><span class="cov0" title="0">{
+                        // Booking routes
+                        bookings := protected.Group("/bookings")
+                        </span><span class="cov0" title="0">{
+                                bookings.POST("", bookingHandler.CreateBooking)
+                                bookings.GET("/:id", bookingHandler.GetBooking)
+                                bookings.POST("/:id/issue", bookingHandler.IssueBooking)
+                                bookings.POST("/:id/cancel", bookingHandler.CancelBooking)
+                        }</span>
+
+                        // Payment routes
+                        <span class="cov0" title="0">payments := protected.Group("/payments")
+                        </span><span class="cov0" title="0">{
+                                payments.POST("/checkout-session", paymentHandler.CreateCheckoutSession)
+                                payments.POST("/billing-portal", paymentHandler.CreateBillingPortal)
+                        }</span>
+                }
+
+                // Admin/Agent routes
+                <span class="cov0" title="0">admin := api.Group("/admin")
+                admin.Use(middleware.AuthRequired(cfg.JWTSecret))
+                admin.Use(middleware.AdminRequired())
+                </span><span class="cov0" title="0">{
+                        admin.GET("/bookings", bookingHandler.GetAllBookings)
+                        admin.POST("/bookings/:id/waive", bookingHandler.WaiveBooking)
+                        admin.POST("/reprice", bookingHandler.RepriceBookings)
+                }</span>
+        }
+
+        // WebSocket endpoint
+        <span class="cov0" title="0">router.GET("/ws", func(c *gin.Context) </span><span class="cov0" title="0">{
+                ws.HandleWebSocket(c, hub)
+        }</span>)
+
+        // Stripe webhook
+        <span class="cov0" title="0">router.POST("/webhooks/stripe", paymentHandler.HandleStripeWebhook)</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package ws
+
+import (
+        "encoding/json"
+        "strconv"
+        "time"
+)
+
+type EventType string
+
+const (
+        EventPriceTick     EventType = "priceTick"
+        EventSeatUpdate    EventType = "seatUpdate"
+        EventBookingStatus EventType = "bookingStatus"
+)
+
+type Event struct {
+        Type      EventType   `json:"type"`
+        Channel   string      `json:"channel"`
+        Data      interface{} `json:"data"`
+        Timestamp time.Time   `json:"timestamp"`
+}
+
+type PriceTickData struct {
+        SearchHash string  `json:"search_hash"`
+        FlightID   uint    `json:"flight_id"`
+        FareID     uint    `json:"fare_id"`
+        OldPrice   float64 `json:"old_price"`
+        NewPrice   float64 `json:"new_price"`
+        Currency   string  `json:"currency"`
+}
+
+type SeatUpdateData struct {
+        FlightID uint   `json:"flight_id"`
+        SeatID   uint   `json:"seat_id"`
+        Status   string `json:"status"`
+        Row      int    `json:"row"`
+        Column   string `json:"column"`
+        Class    string `json:"class"`
+}
+
+type BookingStatusData struct {
+        BookingID uint   `json:"booking_id"`
+        PNR       string `json:"pnr"`
+        Status    string `json:"status"`
+        Message   string `json:"message,omitempty"`
+}
+
+func NewPriceTickEvent(searchHash string, flightID, fareID uint, oldPrice, newPrice float64, currency string) *Event <span class="cov0" title="0">{
+        return &amp;Event{
+                Type:    EventPriceTick,
+                Channel: "priceTick:" + searchHash,
+                Data: PriceTickData{
+                        SearchHash: searchHash,
+                        FlightID:   flightID,
+                        FareID:     fareID,
+                        OldPrice:   oldPrice,
+                        NewPrice:   newPrice,
+                        Currency:   currency,
+                },
+                Timestamp: time.Now(),
+        }
+}</span>
+
+func NewSeatUpdateEvent(flightID, seatID uint, status, row, column, class string) *Event <span class="cov0" title="0">{
+        return &amp;Event{
+                Type:    EventSeatUpdate,
+                Channel: "seatUpdate:" + string(rune(flightID)),
+                Data: SeatUpdateData{
+                        FlightID: flightID,
+                        SeatID:   seatID,
+                        Status:   status,
+                        Row:      func() int </span><span class="cov0" title="0">{ r, _ := strconv.Atoi(row); return r }</span>(),
+                        Column:   column,
+                        Class:    class,
+                },
+                Timestamp: time.Now(),
+        }
+}
+
+func NewBookingStatusEvent(bookingID uint, pnr, status, message string) *Event <span class="cov0" title="0">{
+        return &amp;Event{
+                Type:    EventBookingStatus,
+                Channel: "bookingStatus:" + string(rune(bookingID)),
+                Data: BookingStatusData{
+                        BookingID: bookingID,
+                        PNR:       pnr,
+                        Status:    status,
+                        Message:   message,
+                },
+                Timestamp: time.Now(),
+        }
+}</span>
+
+func (e *Event) ToJSON() ([]byte, error) <span class="cov0" title="0">{
+        return json.Marshal(e)
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package ws
+
+import (
+        "log"
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+        "github.com/gorilla/websocket"
+)
+
+var upgrader = websocket.Upgrader{
+        CheckOrigin: func(r *http.Request) bool <span class="cov0" title="0">{
+                return true // Allow all origins in development
+        }</span>,
+}
+
+type Hub struct {
+        clients    map[*Client]bool
+        register   chan *Client
+        unregister chan *Client
+        broadcast  chan []byte
+}
+
+type Client struct {
+        hub      *Hub
+        conn     *websocket.Conn
+        send     chan []byte
+        channels []string
+}
+
+func NewHub() *Hub <span class="cov4" title="2">{
+        return &amp;Hub{
+                clients:    make(map[*Client]bool),
+                register:   make(chan *Client),
+                unregister: make(chan *Client),
+                broadcast:  make(chan []byte),
+        }
+}</span>
+
+func (h *Hub) Run() <span class="cov1" title="1">{
+        for </span><span class="cov6" title="3">{
+                select </span>{
+                case client := &lt;-h.register:<span class="cov1" title="1">
+                        h.clients[client] = true
+                        log.Printf("Client connected. Total clients: %d", len(h.clients))</span>
+
+                case client := &lt;-h.unregister:<span class="cov1" title="1">
+                        if _, ok := h.clients[client]; ok </span><span class="cov1" title="1">{
+                                delete(h.clients, client)
+                                close(client.send)
+                                log.Printf("Client disconnected. Total clients: %d", len(h.clients))
+                        }</span>
+
+                case message := &lt;-h.broadcast:<span class="cov0" title="0">
+                        for client := range h.clients </span><span class="cov0" title="0">{
+                                select </span>{
+                                case client.send &lt;- message:<span class="cov0" title="0"></span>
+                                default:<span class="cov0" title="0">
+                                        close(client.send)
+                                        delete(h.clients, client)</span>
+                                }
+                        }
+                }
+        }
+}
+
+func (h *Hub) BroadcastToChannel(channel string, message []byte) <span class="cov0" title="0">{
+        for client := range h.clients </span><span class="cov0" title="0">{
+                for _, clientChannel := range client.channels </span><span class="cov0" title="0">{
+                        if clientChannel == channel </span><span class="cov0" title="0">{
+                                select </span>{
+                                case client.send &lt;- message:<span class="cov0" title="0"></span>
+                                default:<span class="cov0" title="0">
+                                        close(client.send)
+                                        delete(h.clients, client)</span>
+                                }
+                                <span class="cov0" title="0">break</span>
+                        }
+                }
+        }
+}
+
+func HandleWebSocket(c *gin.Context, hub *Hub) <span class="cov0" title="0">{
+        conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("WebSocket upgrade error: %v", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">client := &amp;Client{
+                hub:      hub,
+                conn:     conn,
+                send:     make(chan []byte, 256),
+                channels: []string{},
+        }
+
+        client.hub.register &lt;- client
+
+        go client.writePump()
+        go client.readPump()</span>
+}
+
+func (c *Client) readPump() <span class="cov0" title="0">{
+        defer func() </span><span class="cov0" title="0">{
+                c.hub.unregister &lt;- c
+                c.conn.Close()
+        }</span>()
+
+        <span class="cov0" title="0">for </span><span class="cov0" title="0">{
+                var msg map[string]interface{}
+                err := c.conn.ReadJSON(&amp;msg)
+                if err != nil </span><span class="cov0" title="0">{
+                        if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) </span><span class="cov0" title="0">{
+                                log.Printf("WebSocket error: %v", err)
+                        }</span>
+                        <span class="cov0" title="0">break</span>
+                }
+
+                // Handle subscription messages
+                <span class="cov0" title="0">if action, ok := msg["action"].(string); ok </span><span class="cov0" title="0">{
+                        switch action </span>{
+                        case "subscribe":<span class="cov0" title="0">
+                                if channel, ok := msg["channel"].(string); ok </span><span class="cov0" title="0">{
+                                        c.subscribe(channel)
+                                }</span>
+                        case "unsubscribe":<span class="cov0" title="0">
+                                if channel, ok := msg["channel"].(string); ok </span><span class="cov0" title="0">{
+                                        c.unsubscribe(channel)
+                                }</span>
+                        }
+                }
+        }
+}
+
+func (c *Client) writePump() <span class="cov0" title="0">{
+        defer c.conn.Close()
+
+        for message := range c.send </span><span class="cov0" title="0">{
+                if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("WebSocket write error: %v", err)
+                        return
+                }</span>
+        }
+        <span class="cov0" title="0">c.conn.WriteMessage(websocket.CloseMessage, []byte{})</span>
+}
+
+func (c *Client) subscribe(channel string) <span class="cov6" title="3">{
+        // Check if already subscribed
+        for _, ch := range c.channels </span><span class="cov4" title="2">{
+                if ch == channel </span><span class="cov1" title="1">{
+                        return
+                }</span>
+        }
+        <span class="cov4" title="2">c.channels = append(c.channels, channel)
+        log.Printf("Client subscribed to channel: %s", channel)</span>
+}
+
+func (c *Client) unsubscribe(channel string) <span class="cov7" title="4">{
+        for i, ch := range c.channels </span><span class="cov10" title="6">{
+                if ch == channel </span><span class="cov6" title="3">{
+                        c.channels = append(c.channels[:i], c.channels[i+1:]...)
+                        log.Printf("Client unsubscribed from channel: %s", channel)
+                        break</span>
+                }
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

@@ -1,0 +1,223 @@
+name: ci
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  server-test:
+    # name: Server Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skyliner_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:8
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: |
+        cd server
+        go mod download
+        go mod verify
+
+    - name: Run tests
+      run: |
+        cd server
+        go test -v -race -coverprofile=coverage.out ./...
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/skyliner_test?sslmode=disable
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-secret-key
+        STRIPE_SECRET_KEY: sk_test_fake_key
+        STRIPE_WEBHOOK_SECRET: whsec_fake_secret
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./server/coverage.out
+        flags: backend
+        name: backend-coverage
+
+    - name: Run linter
+      run: |
+        cd server
+        go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
+
+  frontend-test:
+    # name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Run linter
+      run: |
+        cd frontend
+        npm run lint
+
+    - name: Run type check
+      run: |
+        cd frontend
+        npm run typecheck
+
+    - name: Run tests
+      run: |
+        cd frontend
+        npm run test
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  integration-test:
+    # name: Integration Test
+    runs-on: ubuntu-latest
+    needs: [server-test, frontend-test]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skyliner_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:8
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+
+    - name: Install backend dependencies
+      run: |
+        cd server
+        go mod download
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Start backend server
+      run: |
+        cd server
+        go run cmd/server/main.go &
+        sleep 10
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/skyliner_test?sslmode=disable
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-secret-key
+        STRIPE_SECRET_KEY: sk_test_fake_key
+        STRIPE_WEBHOOK_SECRET: whsec_fake_secret
+        PORT: 8080
+
+    - name: Start frontend server
+      run: |
+        cd frontend
+        npm run preview -- --port 5193 &
+        sleep 10
+
+    - name: Run integration tests
+      run: |
+        # Wait for services to be ready
+        timeout 60 bash -c 'until curl -f http://localhost:8080/health; do sleep 2; done'
+        timeout 60 bash -c 'until curl -f http://localhost:5193; do sleep 2; done'
+        
+        # Run basic health checks
+        curl -f http://localhost:8080/health
+        curl -f http://localhost:5193
+        
+        # Test API endpoints
+        curl -f http://localhost:8080/api/v1/airports
+        curl -f http://localhost:8080/api/v1/airlines
+
+    - name: Stop services
+      if: always()
+      run: |
+        pkill -f "go run cmd/server/main.go" || true
+        pkill -f "npm run preview" || true
+
+  notify:
+    # name: Notify
+    runs-on: ubuntu-latest
+    needs: [server-test, frontend-test, integration-test]
+    if: always()
+
+    steps:
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "CI pipeline failed. Please check the logs."

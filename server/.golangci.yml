@@ -1,0 +1,19 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - errcheck
+    - staticcheck
+    - gosimple
+    - unused
+    - ineffassign
+    - typecheck
+    - goconst
+    - gocyclo
+    - misspell
+    - whitespace
